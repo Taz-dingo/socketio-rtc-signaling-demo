@@ -1,21 +1,32 @@
-// hooks/useSocket.js
-import { useEffect, useRef } from "react";
+'use client'
 
-const useSocket = () => {
-  const socketCreated = useRef(false)
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
+
+const SocketContext = createContext();
+
+export const SocketProvider = ({ children }) => {
+  const [socket, setSocket] = useState(null);
+
   useEffect(() => {
-    if (!socketCreated.current) {
-      const socketInitializer = async () => {
-        await fetch('/api/socket')
-      }
-      try {
-        socketInitializer()
-        socketCreated.current = true
-      } catch (error) {
-        console.log(error)
-      }
-    }
+    const socketInitializer = async () => {
+      await fetch('/api/socket');
+      const newSocket = io();
+      setSocket(newSocket); // 用 setSocket 更新 state 触发重新渲染
+    };
+
+    socketInitializer();
+
+    return () => {
+      if (socket) socket.disconnect();
+    };
   }, []);
+
+  return (
+    <SocketContext.Provider value={socket}>
+      {children}
+    </SocketContext.Provider>
+  );
 };
 
-export default useSocket
+export const useSocket = () => useContext(SocketContext);

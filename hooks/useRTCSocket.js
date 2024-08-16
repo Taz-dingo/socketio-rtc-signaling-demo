@@ -1,5 +1,7 @@
+'use client'
+
 import { useEffect, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
+import { useSocket } from './useSocket'; // 引入 useSocket
 
 const ICE_SERVERS = {
     iceServers: [
@@ -16,44 +18,41 @@ export const useRTCSocket = (roomName) => {
     const userVideoRef = useRef();
     const peerVideoRef = useRef();
     const rtcConnectionRef = useRef(null);
-    const socketRef = useRef();
     const userStreamRef = useRef();
     const hostRef = useRef(false);
-    const socketInitialized = useRef(false);
+
+    const socket = useSocket(); // 使用 SocketContext 提供的 socket 实例
 
     useEffect(() => {
-        if (!socketInitialized.current) {
-            const socketInitializer = async () => {
-                await fetch('/api/socket');
-                socketRef.current = io();
+        
+        if (socket) {
+            // socket.on('connect', () => {
+            //     console.log('Socket connected');
+            //     socket.emit('join', roomName);
+            // });
+            console.log('Socket connected');
+            socket.emit('join', roomName);
 
-                socketRef.current.on('connect', () => {
-                    console.log('Socket connected');
-                    socketRef.current.emit('join', roomName);
-                });
-
-                socketRef.current.on('joined', handleRoomJoined);
-                socketRef.current.on('created', handleRoomCreated);
-                socketRef.current.on('ready', initiateCall);
-                socketRef.current.on('leave', onPeerLeave);
-                socketRef.current.on('full', () => {
-                    window.location.href = '/';
-                });
-                socketRef.current.on('offer', handleReceivedOffer);
-                socketRef.current.on('answer', handleAnswer);
-                socketRef.current.on('ice-candidate', handlerNewIceCandidateMsg);
-            };
-
-            socketInitializer().catch(console.error);
-            socketInitialized.current = true;
+            socket.on('joined', handleRoomJoined);
+            socket.on('created', handleRoomCreated);
+            socket.on('ready', initiateCall);
+            socket.on('leave', onPeerLeave);
+            socket.on('full', () => {
+                window.location.href = '/';
+            });
+            socket.on('offer', handleReceivedOffer);
+            socket.on('answer', handleAnswer);
+            socket.on('ice-candidate', handlerNewIceCandidateMsg);
+        } else {
+            console.log("socket unavailable")
         }
 
         return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
+            if (socket) {
+                socket.disconnect();
             }
         };
-    }, [roomName]);
+    }, [socket, roomName]);
 
     const handleRoomJoined = () => {
         navigator.mediaDevices
@@ -67,7 +66,7 @@ export const useRTCSocket = (roomName) => {
                 userVideoRef.current.onloadedmetadata = () => {
                     userVideoRef.current.play();
                 };
-                socketRef.current.emit('ready', roomName);
+                socket.emit('ready', roomName);
             })
             .catch((err) => {
                 console.log('error', err);
@@ -108,7 +107,7 @@ export const useRTCSocket = (roomName) => {
                 .createOffer()
                 .then((offer) => {
                     rtcConnectionRef.current.setLocalDescription(offer);
-                    socketRef.current.emit('offer', offer, roomName);
+                    socket.emit('offer', offer, roomName);
                 })
                 .catch((error) => {
                     console.log(error);
@@ -156,7 +155,7 @@ export const useRTCSocket = (roomName) => {
                 .createAnswer()
                 .then((answer) => {
                     rtcConnectionRef.current.setLocalDescription(answer);
-                    socketRef.current.emit('answer', answer, roomName);
+                    socket.emit('answer', answer, roomName);
                 })
                 .catch((error) => {
                     console.log(error);
@@ -172,7 +171,7 @@ export const useRTCSocket = (roomName) => {
 
     const handleICECandidateEvent = (event) => {
         if (event.candidate) {
-            socketRef.current.emit('ice-candidate', event.candidate, roomName);
+            socket.emit('ice-candidate', event.candidate, roomName);
         }
     };
 
@@ -210,7 +209,7 @@ export const useRTCSocket = (roomName) => {
     };
 
     const leaveRoom = () => {
-        socketRef.current.emit('leave', roomName);
+        socket.emit('leave', roomName);
         if (userVideoRef.current.srcObject) {
             userVideoRef.current.srcObject.getTracks().forEach((track) => track.stop());
         }
