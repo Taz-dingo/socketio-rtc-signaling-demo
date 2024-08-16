@@ -1,0 +1,45 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+}
+
+.main {
+  text-align: center;
+}
+
+/* h1 {
+  margin-bottom: 1rem;
+  font-size: 2rem;
+  color: #333;
+} */
+
+.room-name {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.join-room {
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.join-room:hover {
+  background-color: #005bb5;
+}
+
+.join-room:focus {
+  outline: none;
+}
