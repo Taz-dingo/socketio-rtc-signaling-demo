@@ -9,7 +9,7 @@ const ICE_SERVERS = {
     ],
 };
 
-const useRtcSocket = (roomName) => {
+export const useRTCSocket = (roomName) => {
     const [micActive, setMicActive] = useState(true);
     const [cameraActive, setCameraActive] = useState(true);
 
@@ -19,23 +19,40 @@ const useRtcSocket = (roomName) => {
     const socketRef = useRef();
     const userStreamRef = useRef();
     const hostRef = useRef(false);
+    const socketInitialized = useRef(false);
 
     useEffect(() => {
-        socketRef.current = io();
-        socketRef.current.emit('join', roomName);
+        if (!socketInitialized.current) {
+            const socketInitializer = async () => {
+                await fetch('/api/socket');
+                socketRef.current = io();
 
-        socketRef.current.on('joined', handleRoomJoined);
-        socketRef.current.on('created', handleRoomCreated);
-        socketRef.current.on('ready', initiateCall);
-        socketRef.current.on('leave', onPeerLeave);
-        socketRef.current.on('full', () => {
-            window.location.href = '/';
-        });
-        socketRef.current.on('offer', handleReceivedOffer);
-        socketRef.current.on('answer', handleAnswer);
-        socketRef.current.on('ice-candidate', handlerNewIceCandidateMsg);
+                socketRef.current.on('connect', () => {
+                    console.log('Socket connected');
+                    socketRef.current.emit('join', roomName);
+                });
 
-        return () => socketRef.current.disconnect();
+                socketRef.current.on('joined', handleRoomJoined);
+                socketRef.current.on('created', handleRoomCreated);
+                socketRef.current.on('ready', initiateCall);
+                socketRef.current.on('leave', onPeerLeave);
+                socketRef.current.on('full', () => {
+                    window.location.href = '/';
+                });
+                socketRef.current.on('offer', handleReceivedOffer);
+                socketRef.current.on('answer', handleAnswer);
+                socketRef.current.on('ice-candidate', handlerNewIceCandidateMsg);
+            };
+
+            socketInitializer().catch(console.error);
+            socketInitialized.current = true;
+        }
+
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
+        };
     }, [roomName]);
 
     const handleRoomJoined = () => {
@@ -167,7 +184,11 @@ const useRtcSocket = (roomName) => {
     };
 
     const handleTrackEvent = (event) => {
-        peerVideoRef.current.srcObject = event.streams[0];
+        if (peerVideoRef.current) {
+            peerVideoRef.current.srcObject = event.streams[0];
+        } else {
+            console.error('peerVideoRef.current 是 undefined');
+        }
     };
 
     const toggleMediaStream = (type, state) => {
@@ -203,7 +224,6 @@ const useRtcSocket = (roomName) => {
             rtcConnectionRef.current.ontrack = null;
             rtcConnectionRef.current.onicecandidate = null;
             rtcConnectionRef.current.close();
-            rtcConnectionRef.current = null;
         }
     };
 
@@ -217,5 +237,3 @@ const useRtcSocket = (roomName) => {
         peerVideoRef,
     };
 };
-
-export default useRtcSocket;

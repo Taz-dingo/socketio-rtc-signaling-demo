@@ -29,7 +29,7 @@ const SocketHandler = (req, res) => {
                 // when there are already two people inside the room.
                 socket.emit("full");
             }
-            console.log(rooms);
+            console.log("rooms", rooms);
         });
 
         // Triggered when the person who joined the room is ready to communicate.
